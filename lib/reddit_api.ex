@@ -1,4 +1,5 @@
 defmodule RedditApi do
+  require Logger
   alias OAuth2.Client
 
   use GenServer
@@ -6,6 +7,8 @@ defmodule RedditApi do
   @singleton_process __MODULE__
   @version Mix.Project.config()[:version]
   @useragent {"User-Agent", "inara_bot_ex (version #{@version}) by /u/wldmr"}
+  @opaque cursor_token :: String.t()
+  @opaque t :: Client.t()
 
   defmacrop report_duration(message, do: block) do
     quote do
@@ -39,17 +42,25 @@ defmodule RedditApi do
     |> Client.put_headers([@useragent])
   end
 
-  @spec get!(Client.t(), String.t(), Keyword.t()) :: term()
+  @spec get!(t(), URI.t(), Keyword.t()) :: OAuth2.Response.t() | OAuth2.Error.t()
   defp get!(client, url, opts \\ []) do
-    client_with_params = Enum.reduce(opts, client, fn {k, v}, c -> Client.put_param(c, k, v) end)
+    url = URI.to_string(url)
+
+    client_with_params =
+      Enum.reduce(opts, client, fn {k, v}, c -> Client.put_param(c, k, v) end)
+
     client_with_params |> Client.get!(url, [@useragent])
   end
 
   def start_link(opt \\ []),
     do: GenServer.start_link(__MODULE__, nil, Keyword.merge(opt, name: @singleton_process))
 
-  def latest_comments(opts \\ []),
-    do: @singleton_process |> GenServer.call({:latest_comments, opts})
+  @spec latest_comments() :: {list(map()), cursor_token()}
+  def latest_comments(), do: latest_comments(nil)
+
+  @spec latest_comments(nil | cursor_token()) :: {list(map()), cursor_token()}
+  def latest_comments(previous_latest_comment_id),
+    do: @singleton_process |> GenServer.call({:latest_comments, previous_latest_comment_id})
 
   def stop(reason \\ :normal, timeout \\ :infinity),
     do: @singleton_process |> GenServer.stop(reason, timeout)
@@ -59,21 +70,42 @@ defmodule RedditApi do
   def init(_init_arg), do: {:ok, nil, {:continue, :refresh_token}}
 
   @impl GenServer
-  def handle_call({:latest_comments, opts}, _from, state) do
+  @spec handle_call(
+          {:latest_comments, nil | cursor_token()},
+          GenServer.from(),
+          t()
+        ) ::
+          {:reply, {list(map()), cursor_token()}, t()}
+  def handle_call({:latest_comments, latest_so_far}, _from, state) do
     uri = URI.new!("/r/firefly/comments")
 
-    uri =
-      Enum.reduce(opts, uri, fn {k, v}, acc -> URI.append_query(acc, "#{k}=#{v}") end)
-      |> URI.to_string()
+    uri = if latest_so_far, do: URI.append_query(uri, "before=#{latest_so_far}"), else: uri
+
+    Logger.debug("Requesting #{uri}")
 
     response = get!(state, uri)
 
-    comments =
-      response.body["data"]["children"]
-      |> Enum.map(&Map.get(&1, "data"))
-      |> Enum.map(&Map.take(&1, ["author", "id", "body", "replies"]))
+    comments = response.body["data"]["children"] |> Enum.map(&Map.get(&1, "data"))
 
-    {:reply, comments, state}
+    """
+    # In case you want to quickly inspect the fields in a comment.
+    Logger.debug(
+      "Comment fields: " <>
+        (Enum.flat_map(response.body["data"]["children"], &Map.keys(&1["data"]))
+         |> Enum.uniq()
+         |> Enum.join(", "))
+    )
+    """
+
+    # Reddit doesn't put the "fullname" in the `id` field, so we have to construct it.
+    prepend_kind = fn id -> if id, do: "t1_#{id}", else: nil end
+
+    new_latest_id =
+      comments
+      |> Enum.map(&prepend_kind.(Map.get(&1, "id")))
+      |> Enum.at(0, latest_so_far)
+
+    {:reply, {comments, new_latest_id}, state}
   end
 
   @impl GenServer
@@ -90,9 +122,7 @@ defmodule RedditApi do
   end
 
   @impl GenServer
-  def handle_info(:refresh_token, state) do
-    {:noreply, state, {:continue, :refresh_token}}
-  end
+  def handle_info(:refresh_token, state), do: {:noreply, state, {:continue, :refresh_token}}
 
   @spec schedule_token_refresh(DateTime.t()) :: reference()
   defp schedule_token_refresh(%DateTime{} = next_refresh) do
