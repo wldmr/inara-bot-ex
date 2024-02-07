@@ -1,5 +1,6 @@
 defmodule Reddit.Client do
   require Logger
+  use Util.Sections
   alias OAuth2.Client
 
   use GenServer
@@ -17,17 +18,8 @@ defmodule Reddit.Client do
     client_with_params =
       Enum.reduce(opts, client, fn {k, v}, c -> Client.put_param(c, k, v) end)
 
-    client_with_params |> Client.get!(url, [@useragent])
-  end
-
-  defmacrop report_duration(message, do: block) do
-    quote do
-      IO.puts("Start: " <> unquote(message))
-      start_time = DateTime.utc_now()
-      unquote(block)
-      end_time = DateTime.utc_now()
-      duration = DateTime.diff(end_time, start_time, :millisecond)
-      IO.puts("Done: " <> unquote(message) <> " – Took #{duration} milliseconds.")
+    defsection timed: "Executing get on #{url}" do
+      client_with_params |> Client.get!(url, [@useragent])
     end
   end
 
@@ -68,7 +60,7 @@ defmodule Reddit.Client do
 
   @impl GenServer
   def handle_continue(:refresh_token, _state) do
-    report_duration "Getting new token." do
+    defsection timed: "Getting new token." do
       authorized_client = new_client() |> Client.get_token!()
     end
 
@@ -85,7 +77,11 @@ defmodule Reddit.Client do
   @spec schedule_token_refresh(DateTime.t()) :: reference()
   defp schedule_token_refresh(%DateTime{} = next_refresh) do
     interval_ms = DateTime.diff(next_refresh, DateTime.utc_now(), :millisecond) |> max(0)
-    IO.puts("Scheduling Token refresh for #{next_refresh} (in #{interval_ms / 3_600_000} hours).")
+
+    Logger.info(
+      "Scheduling Token refresh for #{next_refresh} (in #{interval_ms / 3_600_000} hours)."
+    )
+
     Process.send_after(self(), :refresh_token, interval_ms)
   end
 end

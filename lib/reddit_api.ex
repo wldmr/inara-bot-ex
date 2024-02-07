@@ -1,5 +1,6 @@
 defmodule Reddit.Api do
   require Logger
+  use Util.Sections
 
   # Behaves like a repository
   @behaviour PostRepository
@@ -9,15 +10,6 @@ defmodule Reddit.Api do
 
   @singleton_process __MODULE__
 
-  defmacro please(do: block) do
-    quote do
-      unquote(block)
-    end
-  end
-
-  defmacro please(:dont, do: _block) do
-  end
-
   @impl PostRepository
   @spec fetch_latest(Post.t() | nil) :: list(Post.t())
   def fetch_latest(latest_so_far) do
@@ -25,12 +17,10 @@ defmodule Reddit.Api do
 
     uri = if latest_so_far, do: URI.append_query(uri, "before=#{latest_so_far.id}"), else: uri
 
-    Logger.debug("Requesting #{uri}")
-
     response = Reddit.Client.get!(uri)
 
-    # In case you want to quickly inspect the fields in a comment.
-    please :dont do
+    defsection ignored: "Inspect Comment fields" do
+      # In case you want to quickly inspect the fields in a comment.
       Logger.debug(
         "Comment fields: " <>
           (Enum.flat_map(response.body["data"]["children"], &Map.keys(&1["data"]))
