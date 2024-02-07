@@ -6,10 +6,10 @@ defmodule InaraBotEx.Application do
   use Application
 
   @impl true
-  def start(_type, _args) do
+  def start(_type \\ nil, _args \\ []) do
     children = [
-      {RedditApi, []},
-      {CommentObserver, []}
+      Reddit.Api,
+      CommentObserver
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

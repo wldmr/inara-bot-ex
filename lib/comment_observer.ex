@@ -26,22 +26,23 @@ defmodule CommentObserver do
     {:noreply, new_state}
   end
 
-  defp check_repeatedly(state) do
+  defp check_repeatedly(previous_latest) do
     Process.send_after(self(), :check, 10_000)
 
     Logger.info("Checking for new comments.")
 
-    {new_comments, new_state} = RedditApi.latest_comments(state)
+    new_comments = Reddit.Api.fetch_latest(previous_latest)
 
     Logger.info("#{Enum.count(new_comments)} new comments")
 
-    Enum.each(
-      new_comments,
-      &IO.puts(
-        "#{DateTime.from_unix!(trunc(&1["created"]))} – #{&1["id"]} – #{&1["author"]}:\n#{&1["body"]}\n"
-      )
-    )
+    Enum.each(new_comments, &IO.puts(pretty(&1)))
 
-    new_state
+    new_latest = Enum.at(new_comments, 0, previous_latest)
+    Logger.debug("Latest: #{(previous_latest || %{}) |> Map.get(:id)} → #{new_latest.id}")
+    new_latest
+  end
+
+  defp pretty(%Post{} = post) do
+    "#{post.timestamp} – #{post.id} – #{post.username}:\n#{post.body}\n"
   end
 end
