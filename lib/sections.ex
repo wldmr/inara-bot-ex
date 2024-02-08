@@ -6,7 +6,7 @@ defmodule Util.Sections do
     end
   end
 
-  defmacro defsection(timed: name, do: block) do
+  defmacro defsection(:timed, name, do: block) do
     quote do
       Logger.debug("Start: " <> unquote(name))
       start_time = DateTime.utc_now()
@@ -17,7 +17,10 @@ defmodule Util.Sections do
     end
   end
 
-  defmacro defsection(ignored: _reason, do: _block) do
+  defmacro defsection(:ignored, name, do: _block) do
+    quote do
+      Logger.debug("Not doing: " <> unquote(name))
+    end
   end
 
   defmacro defsection(_name, do: block) do

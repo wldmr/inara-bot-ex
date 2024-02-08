@@ -2,10 +2,8 @@ defmodule Reddit.Api do
   require Logger
   use Util.Sections
 
-  # Behaves like a repository
   @behaviour PostRepository
 
-  # uses other processes under the hood; clients don't need to know this.
   use Supervisor
 
   @singleton_process __MODULE__
@@ -19,8 +17,7 @@ defmodule Reddit.Api do
 
     response = Reddit.Client.get!(uri)
 
-    defsection ignored: "Inspect Comment fields" do
-      # In case you want to quickly inspect the fields in a comment.
+    defsection :ignored, "Inspect Comment fields" do
       Logger.debug(
         "Comment fields: " <>
           (Enum.flat_map(response.body["data"]["children"], &Map.keys(&1["data"]))

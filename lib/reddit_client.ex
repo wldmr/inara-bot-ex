@@ -18,9 +18,10 @@ defmodule Reddit.Client do
     client_with_params =
       Enum.reduce(opts, client, fn {k, v}, c -> Client.put_param(c, k, v) end)
 
-    defsection timed: "Executing get on #{url}" do
-      client_with_params |> Client.get!(url, [@useragent])
+    defsection :timed, "Executing get on #{url}" do
+      result = client_with_params |> Client.get!(url, [@useragent])
     end
+    result
   end
 
   defp new_client(
@@ -60,7 +61,7 @@ defmodule Reddit.Client do
 
   @impl GenServer
   def handle_continue(:refresh_token, _state) do
-    defsection timed: "Getting new token." do
+    defsection :timed, "Getting new token." do
       authorized_client = new_client() |> Client.get_token!()
     end
 
