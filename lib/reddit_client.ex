@@ -10,17 +10,15 @@ defmodule Reddit.Client do
   @useragent {"User-Agent", "inara_bot_ex (version #{@version}) by /u/wldmr"}
 
   ## Client API
-  @spec get!(URI.t(), Keyword.t()) :: OAuth2.Response.t() | OAuth2.Error.t()
-  def get!(url, opts \\ []) do
+  @spec get!(URI.t()) :: OAuth2.Response.t() | OAuth2.Error.t()
+  def get!(%URI{} = uri) do
     client = GenServer.call(@singleton_process, :get)
-    url = URI.to_string(url)
+    uri = URI.to_string(uri)
 
-    client_with_params =
-      Enum.reduce(opts, client, fn {k, v}, c -> Client.put_param(c, k, v) end)
-
-    defsection :timed, "Executing get on #{url}" do
-      result = client_with_params |> Client.get!(url, [@useragent])
+    defsection :timed, "Executing get on #{uri}" do
+      result = client |> Client.get!(uri)
     end
+
     result
   end
 
@@ -34,15 +32,11 @@ defmodule Reddit.Client do
       strategy: OAuth2.Strategy.Password,
       client_id: client_id,
       client_secret: client_secret,
-      params: %{
-        "username" => username,
-        "password" => password
-      },
+      params: %{"username" => username, "password" => password},
       site: "https://oauth.reddit.com",
       token_url: "https://#{client_id}:#{client_secret}@www.reddit.com/api/v1/access_token"
     )
     |> Client.put_serializer("application/json", Jason)
-    |> Client.put_headers([@useragent])
   end
 
   ## GenServer callbacks
@@ -62,8 +56,12 @@ defmodule Reddit.Client do
   @impl GenServer
   def handle_continue(:refresh_token, _state) do
     defsection :timed, "Getting new token." do
-      authorized_client = new_client() |> Client.get_token!()
+      authorized_client = new_client() |> Client.put_headers([@useragent]) |> Client.get_token!()
     end
+
+    # Client functions don't preserve headers, so we re-add them,
+    # so that functions using the client don't have to.
+    authorized_client = authorized_client |> Client.put_headers([@useragent])
 
     DateTime.from_unix!(authorized_client.token.expires_at)
     |> DateTime.add(-10, :second)
