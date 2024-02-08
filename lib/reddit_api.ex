@@ -13,7 +13,12 @@ defmodule Reddit.Api do
   def fetch_latest(latest_so_far) do
     uri = URI.new!("/r/firefly/comments")
 
-    uri = if latest_so_far, do: URI.append_query(uri, "before=#{latest_so_far.id}"), else: uri
+    uri =
+      if latest_so_far do
+        uri |> URI.append_query(URI.encode_query(before: latest_so_far.id))
+      else
+        uri
+      end
 
     response = Reddit.Client.get!(uri)
 
