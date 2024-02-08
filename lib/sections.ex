@@ -10,10 +10,11 @@ defmodule Util.Sections do
     quote do
       Logger.debug("Start: " <> unquote(name))
       start_time = DateTime.utc_now()
-      unquote(block)
+      result = unquote(block)
       end_time = DateTime.utc_now()
       duration = DateTime.diff(end_time, start_time, :millisecond)
       Logger.debug("Done: " <> unquote(name) <> " – Took #{duration} milliseconds.")
+      result
     end
   end
 

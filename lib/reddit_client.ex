@@ -16,10 +16,8 @@ defmodule Reddit.Client do
     uri = URI.to_string(uri)
 
     defsection :timed, "Executing get on #{uri}" do
-      result = client |> Client.get!(uri)
+      client |> Client.get!(uri)
     end
-
-    result
   end
 
   defp new_client(
@@ -55,12 +53,15 @@ defmodule Reddit.Client do
 
   @impl GenServer
   def handle_continue(:refresh_token, _state) do
-    defsection :timed, "Getting new token." do
-      authorized_client = new_client() |> Client.put_headers([@useragent]) |> Client.get_token!()
-    end
+    authorized_client =
+      defsection :timed, "Getting new token." do
+        new_client()
+        |> Client.put_headers([@useragent])
+        |> Client.get_token!()
+      end
 
-    # Client functions don't preserve headers, so we re-add them,
-    # so that functions using the client don't have to.
+    # `get_token!` doesn't preserve headers. We re-add them right away,
+    # so that functions using the client don't have to anymore.
     authorized_client = authorized_client |> Client.put_headers([@useragent])
 
     DateTime.from_unix!(authorized_client.token.expires_at)
