@@ -9,20 +9,18 @@ defmodule Reddit.Api do
   @singleton_process __MODULE__
 
   @impl PostRepository
-  @spec fetch_latest(Post.t() | nil) :: list(Post.t())
-  def fetch_latest(latest_so_far) do
-    uri = URI.new!("/r/firefly/comments")
+  @spec fetch_latest(Forum.id(), Post.id() | nil) :: list(Post.t())
+  def fetch_latest(forum, latest_so_far \\ nil) do
+    uri = URI.new!("/r/#{forum.name}/comments")
 
     uri =
-      if latest_so_far do
-        uri |> URI.append_query(URI.encode_query(before: latest_so_far.id))
-      else
-        uri
-      end
+      if latest_so_far,
+        do: uri |> URI.append_query(URI.encode_query(before: latest_so_far)),
+        else: uri
 
     response = Reddit.Client.get!(uri)
 
-    defsection :ignored, "Inspect Comment fields" do
+    defsection "Inspect Comment fields" do
       Logger.debug(
         "Comment fields: " <>
           (Enum.flat_map(response.body["data"]["children"], &Map.keys(&1["data"]))
@@ -37,6 +35,7 @@ defmodule Reddit.Api do
       %Post{
         id: "#{kind}_#{post["id"]}",
         username: post["author"],
+        parent: post["parent_id"],
         heading: nil,
         body: post["body"],
         timestamp: post["created"] |> trunc() |> DateTime.from_unix!()
@@ -45,9 +44,9 @@ defmodule Reddit.Api do
   end
 
   @impl PostRepository
-  @spec send_reply(Reply.t()) :: :ok | {:error, term()}
-  def send_reply(reply) do
-    Logger.debug("I would send the reply #{reply}, but that's not implemented yet.")
+  @spec send_post(Post.t()) :: :ok | {:error, term()}
+  def send_post(reply) do
+    Logger.debug("I would send the reply #{inspect(reply)}, but that's not implemented yet.")
     :ok
   end
 

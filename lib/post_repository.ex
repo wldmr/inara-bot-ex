@@ -1,4 +1,5 @@
 defmodule PostRepository do
-  @callback fetch_latest(Post.t() | nil) :: list(Post.t())
-  @callback send_reply(Reply.t()) :: :ok | {:error, term()}
+  @type t :: module()
+  @callback fetch_latest(Forum.id(), Post.id() | nil) :: list(Post.t())
+  @callback send_post(Post.t()) :: :ok | {:error, term()}
 end

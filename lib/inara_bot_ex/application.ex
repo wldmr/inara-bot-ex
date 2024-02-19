@@ -9,7 +9,7 @@ defmodule InaraBotEx.Application do
   def start(_type \\ nil, _args \\ []) do
     children = [
       Reddit.Api,
-      CommentObserver
+      InaraBot.Server
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
