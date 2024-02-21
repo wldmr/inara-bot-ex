@@ -49,7 +49,7 @@ defmodule InaraBot do
     new_posts
     |> Enum.map(&respond_to/1)
     |> Enum.reject(&is_nil/1)
-    |> Enum.map(&repo.send_post/1)
+    |> Enum.each(&repo.send_post/1)
 
     last_seen_post =
       new_posts

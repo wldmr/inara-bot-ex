@@ -2,16 +2,30 @@ defmodule InaraBot.Server do
   require Logger
   use GenServer
 
-  @singleton_process __MODULE__
+  @opaque t() :: %__MODULE__{}
+  defstruct [:repo, :botstate]
 
-  def start_link(_opts \\ []) do
-    GenServer.start_link(__MODULE__, nil, name: @singleton_process)
+  def child_spec(repo: repo) do
+    init_botstate = %__MODULE__{
+      repo: repo,
+      botstate: InaraBot.new(%Forum{name: "firefly"})
+    }
+
+    %{
+      id: "InaraBot-for-#{inspect(repo)}",
+      start: {__MODULE__, :start_link, [init_botstate]}
+    }
+  end
+
+  @spec start_link(t()) :: GenServer.on_start()
+  def start_link(init_state) do
+    GenServer.start_link(__MODULE__, init_state)
   end
 
   @impl GenServer
-  @spec init(nil) :: {:ok, InaraBot.state(), {:continue, :check}}
-  def init(_init_arg \\ nil) do
-    {:ok, InaraBot.new(%Forum{name: "firefly"}), {:continue, :check}}
+  @spec init(module()) :: {:ok, t(), {:continue, :check}}
+  def init(%__MODULE__{} = init_state) do
+    {:ok, init_state, {:continue, :check}}
   end
 
   @impl GenServer
@@ -27,11 +41,9 @@ defmodule InaraBot.Server do
   end
 
   defp check_repeatedly(state) do
-    # TODO: This is obviously still wrong; need to create a way to get the repository dynamically
-    repo = Process.whereis(Reddit.Api) |> IO.inspect() |> Process.get() |> IO.inspect()
-    Logger.info("Checking for new comments in #{repo}")
-    new_state = InaraBot.check_and_respond(state, Reddit.Api)
+    Logger.info("Checking for new comments in #{state.repo}")
+    new_botstate = InaraBot.check_and_respond(state.botstate, state.repo)
     Process.send_after(self(), :check, 10_000)
-    new_state
+    %{state | botstate: new_botstate}
   end
 end
