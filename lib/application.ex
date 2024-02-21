@@ -1,4 +1,4 @@
-defmodule InaraBotEx.Application do
+defmodule InaraBotExApplication do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
@@ -8,8 +8,10 @@ defmodule InaraBotEx.Application do
   @impl true
   def start(_type \\ nil, _args \\ []) do
     children = [
+      # TODO: Have the bot server manage the repo lifecyle
+      # TODO: Make the (Reddit) identity configurable here
       Reddit.Api,
-      InaraBot.Server
+      {InaraBot.Server, [repo: Reddit.Api]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
