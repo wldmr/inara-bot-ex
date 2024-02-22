@@ -21,22 +21,26 @@ defmodule InaraBot do
 
   ## Examples
 
-      iex> InaraBot.respond_to("I like the Serenity very much")
-      "It's just Serenity."
+      iex> InaraBot.respond_to(%Post{body: "I like the Serenity very much"})
+      %Post{body: "> the Serenity\\n\\nIt's just Serenity."}
 
-      iex> InaraBot.respond_to("I like the serenity very much")
-      "It's just Serenity."
+      iex> InaraBot.respond_to(%Post{body: "I like the serenity very much"})
+      %Post{body: "> the serenity\\n\\nIt's just Serenity."}
 
-      iex> InaraBot.respond_to("I like the Serenity crew very much")
+      iex> InaraBot.respond_to(%Post{body: "I like the Serenity crew very much"})
       nil
   """
   @spec respond_to(Post.t()) :: Post.t() | nil
   def respond_to(msg) do
-    if String.match?(msg.body, @re) do
-      %Post{
-        body: "It's just Serenity.",
-        parent: msg.id
-      }
+    case Regex.run(@re, msg.body) do
+      [offender] ->
+        %Post{
+          body: "> #{offender}\n\nIt's just Serenity.",
+          parent: msg.id
+        }
+
+      nil ->
+        nil
     end
   end
 
@@ -56,8 +60,7 @@ defmodule InaraBot do
       |> Enum.max_by(& &1.timestamp, fn -> %{} end)
       |> Map.get(:id, state.last_seen_post)
 
-    Logger.debug("Latest: #{(state.last_seen_post || "∅")} → #{last_seen_post}")
+    Logger.debug("Latest: #{state.last_seen_post || "∅"} → #{last_seen_post}")
     %{state | last_seen_post: last_seen_post}
   end
-
 end
