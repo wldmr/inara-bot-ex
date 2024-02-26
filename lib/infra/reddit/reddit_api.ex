@@ -1,15 +1,17 @@
-defmodule Reddit.Api do
+defmodule Infra.Reddit.Api do
   require Logger
   use Util.Sections
 
-  @behaviour PostRepository
+  alias Infra.Reddit.Client
+
+  @behaviour Domain.PostRepository
 
   use Supervisor
 
   @singleton_process __MODULE__
 
-  @impl PostRepository
-  @spec fetch_latest(Forum.id(), Post.id() | nil) :: list(Post.t())
+  @impl Domain.PostRepository
+  @spec fetch_latest(Domain.Forum.id(), Domain.Post.id() | nil) :: list(Post.t())
   def fetch_latest(forum, latest_so_far \\ nil) do
     uri = URI.new!("/r/#{forum.name}/comments")
 
@@ -18,7 +20,7 @@ defmodule Reddit.Api do
         do: uri |> URI.append_query(URI.encode_query(before: latest_so_far)),
         else: uri
 
-    response = Reddit.Client.get!(uri)
+    response = Client.get!(uri)
 
     defsection "Inspect Comment fields" do
       Logger.debug(
@@ -32,7 +34,7 @@ defmodule Reddit.Api do
     response.body["data"]["children"]
     |> Enum.map(&{&1["kind"], &1["data"]})
     |> Enum.map(fn {kind, post} ->
-      %Post{
+      %Domain.Post{
         id: "#{kind}_#{post["id"]}",
         username: post["author"],
         parent: post["parent_id"],
@@ -43,8 +45,8 @@ defmodule Reddit.Api do
     end)
   end
 
-  @impl PostRepository
-  @spec send_post(Post.t()) :: :ok | {:error, term()}
+  @impl Domain.PostRepository
+  @spec send_post(Domain.Post.t()) :: :ok | {:error, term()}
   def send_post(reply) do
     Logger.debug("I would send the reply #{inspect(reply)}, but that's not implemented yet.")
     :ok
@@ -57,7 +59,7 @@ defmodule Reddit.Api do
 
   @impl Supervisor
   def init(_init_arg) do
-    children = [Reddit.Client]
+    children = [Client]
     Supervisor.init(children, strategy: :one_for_one)
   end
 end

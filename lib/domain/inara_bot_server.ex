@@ -8,7 +8,7 @@ defmodule InaraBot.Server do
   def child_spec(repo: repo) do
     init_botstate = %__MODULE__{
       repo: repo,
-      botstate: InaraBot.new(%Forum{name: "firefly"})
+      botstate: InaraBot.new(%Domain.Forum{name: "firefly"})
     }
 
     %{

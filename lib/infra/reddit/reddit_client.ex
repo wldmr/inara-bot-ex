@@ -1,4 +1,4 @@
-defmodule Reddit.Client do
+defmodule Infra.Reddit.Client do
   require Logger
   use Util.Sections
   alias OAuth2.Client
