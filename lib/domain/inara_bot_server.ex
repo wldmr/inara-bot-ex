@@ -2,30 +2,32 @@ defmodule InaraBot.Server do
   require Logger
   use GenServer
 
-  @opaque t() :: %__MODULE__{}
-  defstruct [:repo, :botstate]
+  @opaque t() :: %__MODULE__{repo: PostRepository.SpecficRepo.t(), bot: InaraBot.t()}
 
-  def child_spec(repo: repo) do
-    init_botstate = %__MODULE__{
+  @enforce_keys [:repo, :bot]
+  defstruct [:repo, :bot]
+
+  def child_spec(repo) do
+    init = %__MODULE__{
       repo: repo,
-      botstate: InaraBot.new(%Domain.Forum{name: "firefly"})
+      bot: InaraBot.new(%Domain.Forum{name: "firefly"})
     }
 
     %{
-      id: "InaraBot-for-#{inspect(repo)}",
-      start: {__MODULE__, :start_link, [init_botstate]}
+      id: "InaraBot-#{repo}",
+      start: {__MODULE__, :start_link, [init]}
     }
   end
 
   @spec start_link(t()) :: GenServer.on_start()
-  def start_link(init_state) do
-    GenServer.start_link(__MODULE__, init_state)
+  def start_link(%__MODULE__{} = init) do
+    GenServer.start_link(__MODULE__, init)
   end
 
   @impl GenServer
-  @spec init(module()) :: {:ok, t(), {:continue, :check}}
-  def init(%__MODULE__{} = init_state) do
-    {:ok, init_state, {:continue, :check}}
+  @spec init(t()) :: {:ok, t(), {:continue, :check}}
+  def init(%__MODULE__{} = init) do
+    {:ok, init, {:continue, :check}}
   end
 
   @impl GenServer
@@ -41,9 +43,9 @@ defmodule InaraBot.Server do
   end
 
   defp check_repeatedly(state) do
-    Logger.info("Checking for new comments in #{state.repo}")
-    new_botstate = InaraBot.check_and_respond(state.botstate, state.repo)
+    Logger.info("Checking for new comments for #{state.repo}")
+    new_botstate = InaraBot.check_and_respond(state.bot, state.repo)
     Process.send_after(self(), :check, 10_000)
-    %{state | botstate: new_botstate}
+    %{state | bot: new_botstate}
   end
 end

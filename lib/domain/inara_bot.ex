@@ -6,7 +6,7 @@ defmodule InaraBot do
 
   @re ~r/the serenity\b(?!\s+crew|cast|movie|series)/i
 
-  @opaque state() :: %__MODULE__{}
+  @opaque t() :: %__MODULE__{}
 
   defstruct [:forum, :last_seen_post]
 
@@ -44,16 +44,16 @@ defmodule InaraBot do
     end
   end
 
-  @spec check_and_respond(state(), Domain.PostRepository.t()) :: state()
+  @spec check_and_respond(t(), PostRepository.t()) :: t()
   def check_and_respond(state, repo) do
-    new_posts = repo.fetch_latest(state.forum, state.last_seen_post)
+    new_posts = PostRepository.fetch_latest(repo, state.forum, state.last_seen_post)
 
-    new_posts |> Enum.each(&Logger.debug("New Domain.Post: " <> inspect(&1)))
+    Enum.each(new_posts, &Logger.debug("New Domain.Post: " <> inspect(&1)))
 
     new_posts
     |> Enum.map(&respond_to/1)
     |> Enum.reject(&is_nil/1)
-    |> Enum.each(&repo.send_post/1)
+    |> Enum.each(fn post -> PostRepository.send_post(state.repo, post) end)
 
     last_seen_post =
       new_posts
