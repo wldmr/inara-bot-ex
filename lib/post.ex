@@ -1,4 +1,4 @@
-defmodule Domain.Post do
+defmodule Post do
   @moduledoc """
   A post that some user made somewhere. Bots also produce posts.
 

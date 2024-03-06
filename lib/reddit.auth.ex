@@ -1,4 +1,4 @@
-defmodule PostRepository.Reddit.Auth do
+defmodule Reddit.Auth do
   @moduledoc """
   Abstraction over the particulars of how to authenticate with Reddit
 
@@ -20,7 +20,7 @@ defmodule PostRepository.Reddit.Auth do
   @useragent {"User-Agent", "inara_bot_ex (version #{@version}) by /u/wldmr"}
 
   ## Client API
-  @spec get!(PostRepository.identity(), URI.t()) :: OAuth2.Response.t() | OAuth2.Error.t()
+  @spec get!(atom(), URI.t()) :: OAuth2.Response.t() | OAuth2.Error.t()
   def get!(identity, %URI{} = uri) do
     auth = GenServer.call(via(identity), :get)
     uri = URI.to_string(uri)
@@ -32,10 +32,11 @@ defmodule PostRepository.Reddit.Auth do
 
   @spec new_client(atom()) :: OAuth2.Client.t()
   defp new_client(identity) do
-    username = Environment.get_value!(:username, prefix: identity)
-    password = Environment.get_value!(:password, prefix: identity)
-    client_id = Environment.get_value!(:client_id, prefix: identity)
-    client_secret = Environment.get_value!(:client_secret, prefix: identity)
+    prefix = [:reddit, identity]
+    username = Environment.get_value!(:username, prefix: prefix)
+    password = Environment.get_value!(:password, prefix: prefix)
+    client_id = Environment.get_value!(:client_id, prefix: prefix)
+    client_secret = Environment.get_value!(:client_secret, prefix: prefix)
 
     OAuth2.Client.new(
       strategy: OAuth2.Strategy.Password,
@@ -49,12 +50,13 @@ defmodule PostRepository.Reddit.Auth do
   end
 
   defp via(identity) do
-    InaraBot.Application.via_identity(__MODULE__, identity)
+    String.to_atom("#{__MODULE__}.#{identity}")
   end
 
-  @spec start_link(atom()) :: GenServer.on_start()
-  def start_link(identity),
-    do: GenServer.start_link(__MODULE__, identity, [name: via(identity)])
+  # @spec start_link(atom()) :: GenServer.on_start()
+  def start_link(identity) do
+    GenServer.start_link(__MODULE__, identity, name: via(identity))
+  end
 
   def stop(identity, reason \\ :normal, timeout \\ :infinity),
     do: GenServer.stop(via(identity), reason, timeout)

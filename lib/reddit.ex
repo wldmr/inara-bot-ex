@@ -1,15 +1,9 @@
-defmodule PostRepository.Reddit do
-  alias PostRepository.Reddit
+defmodule Reddit do
   require Logger
   use Util.Sections
 
-  @behaviour PostRepository
-
-  use Supervisor
-
-  @impl PostRepository
-  def fetch_latest(identity, forum, latest_so_far \\ nil) do
-    uri = URI.new!("/r/#{forum.name}/comments")
+  def fetch_latest(identity, subreddit, latest_so_far \\ nil) do
+    uri = URI.new!("/r/#{subreddit}/comments")
 
     uri =
       if latest_so_far,
@@ -30,7 +24,7 @@ defmodule PostRepository.Reddit do
     response.body["data"]["children"]
     |> Enum.map(&{&1["kind"], &1["data"]})
     |> Enum.map(fn {kind, post} ->
-      %Domain.Post{
+      %Post{
         id: "#{kind}_#{post["id"]}",
         username: post["author"],
         parent: post["parent_id"],
@@ -41,10 +35,9 @@ defmodule PostRepository.Reddit do
     end)
   end
 
-  @impl PostRepository
-  def send_post(identity, reply) do
+  def send_post(identity, post) do
     Logger.debug(
-      "I would send the reply #{inspect(reply)} as #{inspect(identity)}, but that's not implemented yet."
+      "I would send the reply #{inspect(post)} as #{inspect(identity)}, but that's not implemented yet."
     )
 
     :ok
@@ -52,15 +45,6 @@ defmodule PostRepository.Reddit do
 
   @spec start_link(keyword()) :: :ignore | {:error, any()} | {:ok, pid()}
   def start_link(identity) do
-    Supervisor.start_link(__MODULE__, identity)
-  end
-
-  @impl Supervisor
-  def init(identity) do
-    children = [
-      {Reddit.Auth, identity}
-    ]
-
-    Supervisor.init(children, strategy: :one_for_one)
+    Supervisor.start_link(__MODULE__, identity, name: String.to_atom("#{__MODULE__}.#{identity}"))
   end
 end
