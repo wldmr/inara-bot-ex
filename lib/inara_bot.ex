@@ -64,10 +64,14 @@ defmodule InaraBot do
 
     Enum.each(new_posts, &Logger.debug("New Post: " <> inspect(&1)))
 
-    new_posts
-    |> Enum.map(&respond_to/1)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.each(fn post -> Reddit.send_post(identity, post) end)
+    new_responses =
+      new_posts
+      # Don't reply to my own posts, that would be silly.
+      # FIXME: This relies on the idenity atom to match the username, which is extremely brittle.
+      |> Enum.reject(&(&1.username == Atom.to_string(identity)))
+      |> Enum.map(&respond_to/1)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.map(&Reddit.send_post(identity, &1))
 
     Logger.debug("Latest: #{inspect(last_seen_post)} → #{inspect(token)}")
     token
