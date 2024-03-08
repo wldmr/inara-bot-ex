@@ -16,8 +16,9 @@ defmodule Reddit.Auth do
 
   use GenServer
 
+  @platform :os.type() |> Tuple.to_list() |> Enum.at(1) |> Atom.to_string()
   @version Mix.Project.config()[:version]
-  @useragent {"User-Agent", "inara_bot_ex (version #{@version}) by /u/wldmr"}
+  @useragent {"User-Agent", "#{@platform}:inara_bot_ex:#{@version} (by /u/wldmr)"}
 
   ## Client API
   @spec get!(atom(), URI.t()) :: OAuth2.Response.t() | OAuth2.Error.t()
