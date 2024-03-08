@@ -143,4 +143,38 @@ defmodule Reddit do
       timestamp: article["created"] |> trunc() |> DateTime.from_unix!()
     }
   end
+
+  @spec find_my_posts(atom(), limit: integer()) :: list(Post.id())
+  def find_my_posts(identity, opts \\ []) do
+    uri =
+      URI.new!("/user/#{identity}/comments")
+      |> URI.append_query(URI.encode_query(sort: "new", limit: Keyword.get(opts, :limit, 1)))
+
+    response = Reddit.Auth.get!(identity, uri)
+    to_posts(response.body)
+  end
+
+  def delete(identity, post_id) do
+    uri = URI.new!("/api/del")
+    body = %{id: post_id}
+    response = Reddit.Auth.post!(identity, uri, body)
+
+    if response.status_code == 200 do
+      :ok
+    else
+      {:error, response.status_code, response.body}
+    end
+  end
+
+  def delete_where(identity, post_predicate, opts \\ []) do
+    find_my_posts(identity, opts)
+    |> Enum.filter(post_predicate)
+    |> Enum.map(& &1.id)
+    |> Enum.map(fn id ->
+      case delete(identity, id) do
+        :ok -> {:deleted, id}
+        error -> Tuple.append(error, id)
+      end
+    end)
+  end
 end
