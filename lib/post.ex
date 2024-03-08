@@ -26,5 +26,4 @@ defmodule Post do
 
   @typedoc "Some data by which to uniquely identify a post."
   @opaque id :: binary()
-
 end

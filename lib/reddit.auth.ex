@@ -20,6 +20,10 @@ defmodule Reddit.Auth do
   @version Mix.Project.config()[:version]
   @useragent {"User-Agent", "#{@platform}:inara_bot_ex:#{@version} (by /u/wldmr)"}
 
+  # For some reason Reddit only accepts form-encoded and replies with json. Seems inconsistent, but oh well …
+  @content_type {"Content-Type", "application/x-www-form-urlencoded"}
+  @accept {"Accept", "application/json"}
+
   ## Client API
   @spec get!(atom(), URI.t()) :: OAuth2.Response.t() | OAuth2.Error.t()
   def get!(identity, %URI{} = uri) do
@@ -28,6 +32,16 @@ defmodule Reddit.Auth do
 
     defsection :timed, "Executing get on #{uri} for #{auth.identity}" do
       OAuth2.Client.get!(auth.client, uri)
+    end
+  end
+
+  @spec post!(atom(), URI.t()) :: OAuth2.Response.t() | OAuth2.Error.t()
+  def post!(identity, %URI{} = uri, body \\ %{}) do
+    auth = GenServer.call(via(identity), :get)
+    uri = URI.to_string(uri)
+
+    defsection :timed, "Executing post on #{uri} for #{auth.identity}" do
+      OAuth2.Client.post!(auth.client, uri, body)
     end
   end
 
@@ -51,6 +65,8 @@ defmodule Reddit.Auth do
   end
 
   defp via(identity) do
+    # not a via tuple (despite the name), but can be easily made into one if using a registry.
+    # For the time being an atom is less hassle and easier to read in :observer
     String.to_atom("#{__MODULE__}.#{identity}")
   end
 
@@ -83,7 +99,8 @@ defmodule Reddit.Auth do
 
     # `get_token!` doesn't preserve headers. We re-add them right away,
     # so that functions using the client don't have to anymore.
-    authorized_client = OAuth2.Client.put_headers(authorized_client, [@useragent])
+    authorized_client =
+      OAuth2.Client.put_headers(authorized_client, [@useragent, @content_type, @accept])
 
     Logger.debug("Refreshed client: #{inspect(authorized_client)}")
 

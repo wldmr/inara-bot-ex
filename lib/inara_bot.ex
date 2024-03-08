@@ -45,6 +45,7 @@ defmodule InaraBot do
   @spec respond_to(Post.t()) :: Post.t() | nil
   def respond_to(msg) do
     text = "#{msg.heading || ""}\n\n#{msg.body || ""}"
+
     case Regex.run(@re, text) do
       [offender] ->
         %Post{
