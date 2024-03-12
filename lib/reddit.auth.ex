@@ -48,12 +48,10 @@ defmodule Reddit.Auth do
 
   @spec new_client(atom() | :default) :: OAuth2.Client.t()
   defp new_client(identity \\ :default) do
-    prefix = if identity === :default, do: :reddit, else: [:reddit, identity]
-    IO.inspect(prefix)
-    username = Environment.get_value!(:username, prefix: prefix)
-    password = Environment.get_value!(:password, prefix: prefix)
-    client_id = Environment.get_value!(:client_id, prefix: prefix)
-    client_secret = Environment.get_value!(:client_secret, prefix: prefix)
+    username = Identity.username!(identity)
+    password = Identity.get!(identity, :password)
+    client_id = Identity.get!(identity, :client_id)
+    client_secret = Identity.get!(identity, :client_secret)
 
     OAuth2.Client.new(
       strategy: OAuth2.Strategy.Password,

@@ -47,8 +47,10 @@ defmodule Post.Watcher do
     Logger.info("Checking for new comments in #{state.forum} as #{state.identity}")
     {posts, latest} = Reddit.fetch_latest(state.identity, state.forum, state.latest)
 
+    username = Identity.username!(state.identity)
+
     posts
-    |> Enum.filter(&(&1.username != "#{state.identity}"))
+    |> Enum.filter(&(&1.username != username))
     |> Enum.each(&Events.emit_new_post/1)
 
     Process.send_after(self(), :check, 10_000)
