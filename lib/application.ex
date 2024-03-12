@@ -10,10 +10,10 @@ defmodule InaraBot.Application do
   def start(_type \\ nil, _args \\ []) do
     children = [
       Events,
-      {Reddit.Auth, :wldmr},
+      Reddit.Auth,
       InaraBot.Server,
-      {Post.Poster, identity: :wldmr},
-      {Post.Watcher, identity: :wldmr, forum: "firefly"}
+      Post.Poster,
+      Post.Watcher,
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -6,7 +6,7 @@ defmodule Post.Watcher do
   @type t() :: %__MODULE__{identity: atom(), forum: String.t(), latest: Reddit.latest_token()}
 
   @enforce_keys [:identity, :forum]
-  defstruct identity: :wldmr,
+  defstruct identity: :default,
             forum: "firefly",
             latest: nil
 

@@ -36,11 +36,7 @@ defmodule Environment do
           nil
       end)
 
-    convert =
-      Enum.find_value(opts, &Function.identity/1, fn
-        {:convert, func} -> func
-        _ -> nil
-      end)
+    convert = Keyword.get(opts, :convert, &Function.identity/1)
 
     "INARA_BOT#{prefix}_#{property_name}"
     |> String.upcase()

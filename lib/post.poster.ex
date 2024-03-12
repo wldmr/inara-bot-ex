@@ -4,7 +4,7 @@ defmodule Post.Poster do
   use GenServer
 
   def child_spec(opts \\ []) do
-    identity = Keyword.fetch!(opts, :identity)
+    identity = Keyword.get(opts, :identity, :default)
 
     %{
       id: "#{__MODULE__}.#{identity}",

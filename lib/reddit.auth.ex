@@ -12,7 +12,8 @@ defmodule Reddit.Auth do
             client: OAuth2.Client.t()
           }
   @enforce_keys [:identity]
-  defstruct [:identity, :client]
+  defstruct identity: :default,
+            client: nil
 
   use GenServer
 
@@ -45,9 +46,10 @@ defmodule Reddit.Auth do
     end
   end
 
-  @spec new_client(atom()) :: OAuth2.Client.t()
-  defp new_client(identity) do
-    prefix = [:reddit, identity]
+  @spec new_client(atom() | :default) :: OAuth2.Client.t()
+  defp new_client(identity \\ :default) do
+    prefix = if identity === :default, do: :reddit, else: [:reddit, identity]
+    IO.inspect(prefix)
     username = Environment.get_value!(:username, prefix: prefix)
     password = Environment.get_value!(:password, prefix: prefix)
     client_id = Environment.get_value!(:client_id, prefix: prefix)
@@ -70,8 +72,15 @@ defmodule Reddit.Auth do
     String.to_atom("#{__MODULE__}.#{identity}")
   end
 
-  # @spec start_link(atom()) :: GenServer.on_start()
+  @spec start_link(atom() | :default | []) :: GenServer.on_start()
   def start_link(identity) do
+    identity =
+      case identity do
+        nil -> :default
+        [] -> :default
+        a when is_atom(a) -> a
+      end
+
     GenServer.start_link(__MODULE__, identity, name: via(identity))
   end
 
