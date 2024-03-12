@@ -2,18 +2,7 @@ defmodule InaraBot do
   @moduledoc """
   Documentation for `InaraBot`.
   """
-  require Logger
-
   @re ~r/the serenity\b(?!\s+crew|cast|movie|series)/i
-
-  # @forum "firefly"
-  @forum "wldmr_bot_practice"
-
-  @opaque t() :: String.t() | nil
-
-  def new() do
-    nil
-  end
 
   @doc """
   Replies with a correction. Or doesn't, I'm not the boss of it.
@@ -58,22 +47,4 @@ defmodule InaraBot do
     end
   end
 
-  @spec check_and_respond(atom(), String.t()) :: t()
-  def check_and_respond(identity, last_seen_post) do
-    {new_posts, token} = Reddit.fetch_latest(identity, @forum, last_seen_post)
-
-    Enum.each(new_posts, &Logger.debug("New Post: " <> inspect(&1)))
-
-    new_responses =
-      new_posts
-      # Don't reply to my own posts, that would be silly.
-      # FIXME: This relies on the idenity atom to match the username, which is extremely brittle.
-      |> Enum.reject(&(&1.username == Atom.to_string(identity)))
-      |> Enum.map(&respond_to/1)
-      |> Enum.reject(&is_nil/1)
-      |> Enum.map(&Reddit.send_post(identity, &1))
-
-    Logger.debug("Latest: #{inspect(last_seen_post)} → #{inspect(token)}")
-    token
-  end
 end

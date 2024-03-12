@@ -4,12 +4,16 @@ defmodule InaraBot.Application do
   @moduledoc false
 
   use Application
+  require Logger
 
   @impl true
   def start(_type \\ nil, _args \\ []) do
     children = [
+      Events,
       {Reddit.Auth, :wldmr},
-      {InaraBot.Server, :wldmr}
+      InaraBot.Server,
+      {Post.Poster, identity: :wldmr},
+      {Post.Watcher, identity: :wldmr, forum: "firefly"}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

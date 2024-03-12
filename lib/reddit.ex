@@ -1,5 +1,4 @@
 defmodule Reddit do
-  alias Jason.Encoder.Integer
   require Logger
   use Util.Sections
 
