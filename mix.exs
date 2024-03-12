@@ -23,7 +23,8 @@ defmodule InaraBotEx.MixProject do
   defp deps do
     [
       {:oauth2, "~> 2.0"},
-      {:jason, "~> 1.4"}
+      {:jason, "~> 1.4"},
+      {:ex_doc, "~> 0.31", only: :dev, runtime: false}
     ]
   end
 end
