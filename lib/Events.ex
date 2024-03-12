@@ -21,19 +21,19 @@ defmodule Events do
       ...>   end
       ...>
       ...>   @impl GenServer
-      ...>   def handle_info({:new_post, %Post{} = post}, _previous_message) do
-      ...>     {:noreply, post.body}
-      ...>   end
+      ...>   def handle_info({:new_post, %Post{} = post}, _previous_message),
+      ...>     do: {:noreply, post.body}
       ...>
       ...>   @impl GenServer
-      ...>   def handle_call(:latest_message, _from, msg), do: {:reply, msg, msg}
+      ...>   def handle_call(:latest_message, _from, msg),
+      ...>    do: {:reply, msg, msg}
       ...> end
       iex> {:ok, pid} = GenServer.start_link(MyEventsListenerA, [])
       iex> Events.emit_new_post(%Post{body: "See?"})
       iex> GenServer.call(pid, :latest_message)
       "See?"
 
-  With associated data (`subscribe_*(some_data)`). Not that `handle_call` takes a 3-tuple;
+  With associated data (`subscribe_*(some_data)`). Note that `handle_call` takes a 3-tuple;
   the third element is `some_data` given to the `subscribe_*()` function:
 
       iex> Events.init([])
@@ -42,31 +42,35 @@ defmodule Events do
       ...>
       ...>   @impl GenServer
       ...>   def init(_arg) do
-      ...>     Events.subscribe_new_post(:me)  # <- Associating data with current regestration
+      ...>     Events.subscribe_new_post(:me)  # <- Associating data with current registration
       ...>     {:ok, nil}
       ...>   end
       ...>
       ...>   @impl GenServer
-      ...>   def handle_info({:new_post, %Post{} = post, data}, _previous_message) do
-      ...>     {:noreply, {data, post.body}}
-      ...>   end
+      ...>   def handle_info({:new_post, %Post{}, data}, _),
+      ...>     do: {:noreply, data}
       ...>
       ...>   @impl GenServer
-      ...>   def handle_call(:latest_message, _from, msg), do: {:reply, msg, msg}
+      ...>   def handle_call(:latest_message, _from, msg),
+      ...>     do: {:reply, msg, msg}
       ...> end
       iex> {:ok, pid} = GenServer.start_link(MyEventsListenerB, [])
-      iex> Events.emit_new_post(%Post{body: "See?"})
+      iex> Events.emit_new_post(%Post{})
       iex> GenServer.call(pid, :latest_message)
-      {:me, "See?"}
+      :me
   """
   use Supervisor
   require Logger
 
   @events_registry String.to_atom("#{__MODULE__}.Events")
 
+  @type assoc_data :: any()
+
   @type event ::
           {:new_post, Post.t()}
           | {:new_reply, Post.t()}
+
+  @type registration :: {:ok, pid()} | {:error, {:already_registered, pid()}}
 
   def start_link(init_arg),
     do: Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
@@ -80,7 +84,7 @@ defmodule Events do
     Supervisor.init(children, strategy: :one_for_one)
   end
 
-  @spec subscribe(atom(), any()) :: {:ok, pid()} | {:error, {:already_registered, pid()}}
+  @spec subscribe(atom(), assoc_data()) :: {:ok, pid()} | {:error, {:already_registered, pid()}}
   defp subscribe(event_name, data) do
     procname = self() |> Process.info() |> Keyword.get(:registered_name, inspect(self()))
     Logger.debug("Registering #{procname} for #{event_name} with data #{data}.")
@@ -99,9 +103,15 @@ defmodule Events do
     end)
   end
 
-  def emit_new_post(%Post{} = post), do: emit({:new_post, post})
+  @spec subscribe_new_post(assoc_data() | nil) :: registration()
   def subscribe_new_post(data \\ nil), do: subscribe(:new_post, data)
 
-  def emit_new_reply(%Post{} = reply), do: emit({:new_reply, reply})
+  @spec emit_new_post(Post.t()) :: :ok
+  def emit_new_post(%Post{} = post), do: emit({:new_post, post})
+
+  @spec subscribe_new_reply(assoc_data() | nil) :: registration()
   def subscribe_new_reply(data \\ nil), do: subscribe(:new_reply, data)
+
+  @spec emit_new_reply(Post.t()) :: :ok
+  def emit_new_reply(%Post{} = reply), do: emit({:new_reply, reply})
 end
