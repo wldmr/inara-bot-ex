@@ -44,7 +44,7 @@ defmodule Post.Watcher do
   end
 
   defp check_repeatedly(state) do
-    Logger.info("Checking for new comments in #{state.forum} as #{state.identity}")
+    Logger.info("Checking for new comments in #{state.forum} as #{Identity.username!(state.identity)}")
     {posts, latest} = Reddit.fetch_latest(state.identity, state.forum, state.latest)
 
     username = Identity.username!(state.identity)

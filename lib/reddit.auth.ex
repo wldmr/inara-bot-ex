@@ -4,6 +4,9 @@ defmodule Reddit.Auth do
 
   Takes care of refreshing its own access token behind the scenes.
   """
+
+  # XXX: This should be made swappable; I don't like that we start and use this during tests.
+
   require Logger
   use Util.Sections
 
