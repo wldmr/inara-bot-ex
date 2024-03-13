@@ -1,4 +1,13 @@
 defmodule Environment do
+  defmacrop raise_if_nil(value, msg) do
+    quote do
+      case unquote(value) do
+        nil -> raise unquote(msg)
+        nonnil -> nonnil
+      end
+    end
+  end
+
   @doc """
 
   ## Examples
@@ -22,6 +31,17 @@ defmodule Environment do
       iex> System.put_env("INARA_BOT_NUMERICAL", "15.4")
       iex> get_value!(:numerical, convert: &String.to_float/1)
       15.4
+
+  You can give a default value:
+
+      iex> get_value!(:doesnt_exist, default: "phew!")
+      "phew!"
+
+  Otherwise, raise an error:
+
+      iex> get_value!(:doesnt_exist)
+      ** (RuntimeError) No environemnt variable named INARA_BOT_DOESNT_EXIST, and no default given.
+
   """
   def get_value!(property_name, opts \\ []) when is_atom(property_name) do
     prefix =
@@ -37,10 +57,13 @@ defmodule Environment do
       end)
 
     convert = Keyword.get(opts, :convert, &Function.identity/1)
+    default = Keyword.get(opts, :default, nil)
 
-    "INARA_BOT#{prefix}_#{property_name}"
-    |> String.upcase()
-    |> System.fetch_env!()
+    env_name = String.upcase("INARA_BOT#{prefix}_#{property_name}")
+
+    env_name
+    |> System.get_env(default)
+    |> raise_if_nil("No environemnt variable named #{env_name}, and no default given.")
     |> convert.()
   end
 end
