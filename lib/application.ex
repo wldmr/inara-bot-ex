@@ -11,9 +11,11 @@ defmodule InaraBot.Application do
     children = [
       Events,
       Reddit.Auth,
-      InaraBot.Server,
+      InaraBot,
       Post.Poster,
-      Post.Watcher,
+      # Order is important here: We start the watcher last so that the consumers don't miss anything.
+      # Feels somewhat brittle, but it'll do in his simple case.
+      Post.Watcher
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
