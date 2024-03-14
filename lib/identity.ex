@@ -13,7 +13,7 @@ defmodule Identity do
   """
 
   @typedoc "uniqely identifies this identity in the system"
-  @type identity_id :: atom()
+  @type t :: atom()
   @type property_t :: any()
 
   @doc """
@@ -21,21 +21,24 @@ defmodule Identity do
 
   Can be converted to any value and/or type with the function given in the `:convert` option.
   """
-  @spec get!(identity_id(), atom()) :: String.t()
-  @spec get!(identity_id(), atom(), convert: (String.t() -> property_t())) :: property_t()
+  @spec get!(t(), atom()) :: String.t()
+  @spec get!(t(), atom(), convert: (String.t() -> property_t())) :: property_t()
 
-  def get!(identity, property, opts \\ [])
-
-  def get!(:default, property, opts),
+  def get!(identity, property, opts \\ []) do
     # we handle the `:default` identity differently, so that the env variable names
     # don't all contain "DEFAULT", which is just ugly.
-    do: Environment.get_value!(property, opts)
-
-  def get!(identity, property, opts),
-    do: Environment.get_value!(property, Keyword.merge(opts, prefix: identity))
+    prefix = if identity === :default, do: nil, else: identity
+    Environment.get_value!(property, Keyword.merge(opts, prefix: prefix))
+  end
 
   @doc "Every identity should at least provide a username."
-  @spec username!(identity_id()) :: String.t()
+  @spec username!(t()) :: String.t()
   def username!(identity),
     do: get!(identity, :username)
+
+  @spec site(t()) :: Site.impl()
+  def site(identity),
+    do:
+      get!(identity, :site, default: Reddit)
+      |> String.to_existing_atom()
 end

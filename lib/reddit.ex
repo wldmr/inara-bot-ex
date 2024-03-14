@@ -4,9 +4,12 @@ defmodule Reddit do
 
   @opaque latest_token() :: %{comment: Post.id(), article: Post.id()}
 
+  @behaviour Site
+
   @comment_kind "t1"
   @article_kind "t3"
 
+  @impl Site
   @spec fetch_latest(atom(), String.t(), latest_token()) :: {list(Post.t()), latest_token()}
   def fetch_latest(identity, subreddit, latest_so_far \\ nil) do
     latest_comment = if latest_so_far, do: Map.get(latest_so_far, :comment), else: nil
@@ -23,6 +26,7 @@ defmodule Reddit do
 
   defguardp is_reply(post) when not is_nil(post.parent)
 
+  @impl Site
   @spec send_post(atom(), Post.t()) :: Post.id()
   def send_post(identity, %Post{} = post) when is_reply(post) do
     Logger.debug("Replying to #{post.parent} as #{identity} with #{post.body}")

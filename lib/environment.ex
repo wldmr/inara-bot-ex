@@ -8,6 +8,15 @@ defmodule Environment do
     end
   end
 
+  defmacrop if_exists(value, func) do
+    quote do
+      case unquote(value) do
+        nil -> nil
+        nonnil -> unquote(func).(nonnil)
+      end
+    end
+  end
+
   @doc """
 
   ## Examples
@@ -24,6 +33,14 @@ defmodule Environment do
 
       iex> System.put_env("INARA_BOT_TEST_ID_SOME_PROP", "It worked!")
       iex> get_value!(:some_prop, prefix: [:test, "id"])
+      "It worked!"
+
+  The prefix can also be nil or the empty list:
+
+      iex> System.put_env("INARA_BOT_SOME_PROP", "It worked!")
+      iex> get_value!(:some_prop, prefix: [])
+      "It worked!"
+      iex> get_value!(:some_prop, prefix: nil)
       "It worked!"
 
   Values can be converted by giving a conversion function:
@@ -44,20 +61,18 @@ defmodule Environment do
 
   """
   def get_value!(property_name, opts \\ []) when is_atom(property_name) do
+    prefix = Keyword.get(opts, :prefix)
+
     prefix =
-      Enum.find_value(opts, "", fn
-        {:prefix, values} when is_list(values) and length(values) > 0 ->
-          "_" <> Enum.map_join(values, "_", &"#{&1}")
-
-        {:prefix, value} ->
-          "_#{value}"
-
-        _ ->
-          nil
-      end)
+      case prefix do
+        nil -> ""
+        [] -> ""
+        values when is_list(values) -> "_" <> Enum.map_join(values, "_", &"#{&1}")
+        value -> "_#{value}"
+      end
 
     convert = Keyword.get(opts, :convert, &Function.identity/1)
-    default = Keyword.get(opts, :default, nil)
+    default = if_exists(Keyword.get(opts, :default), &String.Chars.to_string/1)
 
     env_name = String.upcase("INARA_BOT#{prefix}_#{property_name}")
 

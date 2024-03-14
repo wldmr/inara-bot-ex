@@ -3,7 +3,7 @@ defmodule Post.Watcher do
 
   use GenServer
 
-  @type t() :: %__MODULE__{identity: atom(), forum: String.t(), latest: Reddit.latest_token()}
+  @type t() :: %__MODULE__{identity: Site.identity(), forum: String.t(), latest: Site.latest_token()}
 
   @enforce_keys [:identity, :forum]
   defstruct identity: :default,
@@ -44,14 +44,13 @@ defmodule Post.Watcher do
   end
 
   defp check_repeatedly(state) do
-    Logger.info("Checking for new comments in #{state.forum} as #{Identity.username!(state.identity)}")
-    {posts, latest} = Reddit.fetch_latest(state.identity, state.forum, state.latest)
+    Logger.info(
+      "Checking for new comments in #{state.forum} as #{Identity.username!(state.identity)}"
+    )
 
-    username = Identity.username!(state.identity)
+    {posts, latest} = Site.fetch_latest(state.identity, state.forum, state.latest)
 
-    posts
-    |> Enum.filter(&(&1.username != username))
-    |> Enum.each(&Events.emit_new_post/1)
+    Enum.each(posts, &Events.emit_new_post/1)
 
     Process.send_after(self(), :check, 10_000)
     %{state | latest: latest}

@@ -26,7 +26,7 @@ defmodule Post.Poster do
 
   @impl GenServer
   def handle_info({:new_reply, %Post{} = post, identity}, state) do
-    Reddit.send_post(identity, post)
+    Site.send_post(identity, post)
     {:noreply, state}
   end
 end
