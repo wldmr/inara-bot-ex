@@ -1,6 +1,7 @@
-defmodule Reddit do
+defmodule Site.Reddit do
   require Logger
   use Util.Sections
+  alias Site.Reddit.Auth
 
   @opaque latest_token() :: %{comment: Post.id(), article: Post.id()}
 
@@ -39,7 +40,7 @@ defmodule Reddit do
       text: post.body
     }
 
-    response = Reddit.Auth.post!(identity, uri, content)
+    response = Auth.post!(identity, uri, content)
 
     defsection :ignored, "Inspect Post response fields" do
       Logger.debug(
@@ -71,7 +72,7 @@ defmodule Reddit do
         do: URI.append_query(uri, URI.encode_query(before: comment_token)),
         else: uri
 
-    response = Reddit.Auth.get!(identity, uri)
+    response = Auth.get!(identity, uri)
 
     defsection :ignored, "Inspect Comment fields" do
       Logger.debug(
@@ -100,7 +101,7 @@ defmodule Reddit do
         do: URI.append_query(uri, URI.encode_query(before: article_token)),
         else: uri
 
-    response = Reddit.Auth.get!(identity, uri)
+    response = Auth.get!(identity, uri)
 
     defsection :ignored, "Inspect Article fields" do
       Logger.debug(
@@ -153,14 +154,14 @@ defmodule Reddit do
       URI.new!("/user/#{identity}/comments")
       |> URI.append_query(URI.encode_query(sort: "new", limit: Keyword.get(opts, :limit, 1)))
 
-    response = Reddit.Auth.get!(identity, uri)
+    response = Auth.get!(identity, uri)
     to_posts(response.body)
   end
 
   def delete(identity, post_id) do
     uri = URI.new!("/api/del")
     body = %{id: post_id}
-    response = Reddit.Auth.post!(identity, uri, body)
+    response = Auth.post!(identity, uri, body)
 
     if response.status_code == 200 do
       :ok

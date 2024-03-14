@@ -10,12 +10,12 @@ defmodule InaraBot.Application do
   def start(_type \\ nil, _args \\ []) do
     children = [
       Events,
-      Reddit.Auth,
+      Site.Reddit.Auth,
       InaraBot,
       Post.Poster,
       # Order is important here: We start the watcher last so that the consumers don't miss anything.
       # Feels somewhat brittle, but it'll do in his simple case.
-      Post.Watcher
+      {Post.Watcher, forum: "wldmr_bot_practice"}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -1,4 +1,4 @@
-defmodule Reddit.Auth do
+defmodule Site.Reddit.Auth do
   @moduledoc """
   Abstraction over the particulars of how to authenticate with Reddit
 

@@ -39,6 +39,6 @@ defmodule Identity do
   @spec site(t()) :: Site.impl()
   def site(identity),
     do:
-      get!(identity, :site, default: Reddit)
+      get!(identity, :site, default: Site.Reddit)
       |> String.to_existing_atom()
 end

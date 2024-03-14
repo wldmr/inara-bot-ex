@@ -48,24 +48,37 @@ defmodule InaraBot do
 
   use GenServer
 
-  @spec start_link(any()) :: GenServer.on_start()
+  @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(init_arg) do
     GenServer.start_link(__MODULE__, init_arg)
   end
 
   @impl GenServer
-  @spec init(any()) :: {:ok, []}
-  def init(_init_arg) do
-    Events.subscribe_new_post
+  @spec init(keyword()) :: {:ok, []}
+  def init(init_arg) do
+    identity = Keyword.get(init_arg, :identity, :default)
+    my_username = Identity.username!(identity)
+    Events.subscribe_new_post(my_username)
     {:ok, []}
   end
 
   @impl GenServer
-  def handle_info({:new_post, %Post{} = post}, state) do
-    case InaraBot.respond_to(post) do
-      %Post{} = reply -> Events.emit_new_post(reply)
+  def handle_info({:new_post, %Post{} = post, my_username}, state)
+      when post.username != my_username do
+    case respond_to(post) do
+      %Post{} = reply -> Events.emit_new_reply(reply)
       nil -> nil
     end
+
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info({:new_post, %Post{} = post, my_username}, state)
+      when post.username == my_username do
+    Logger.info("Oops, did I post that? #{inspect(post)}")
+
+    # "I regret to inform you that I have just [replied](#{comment_link}) to [this comment](#{parent_link}).""
 
     {:noreply, state}
   end
